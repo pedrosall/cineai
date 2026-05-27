@@ -1,0 +1,17 @@
+# Entorno
+.venv/
+__pycache__/
+*.pyc
+
+# Datos (no subir CSVs ni pickles a GitHub)
+data/raw/
+data/processed/
+
+# Modelos
+models/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
