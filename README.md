@@ -166,4 +166,4 @@ cineai/
 
 ## 📜 License
 
-Dataset © TMDB, distributed via Kaggle under their respective terms.
+This project is for educational purposes. Dataset © TMDB, distributed via Kaggle under their respective terms.
