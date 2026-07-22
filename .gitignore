@@ -17,3 +17,8 @@ models/
 .DS_Storevenv/
 frontend_venv/
 backend/venv/
+hf_cineai/
+models.zip
+hf_cineai/
+models.zip
+requirements.full-env.txt.bak
