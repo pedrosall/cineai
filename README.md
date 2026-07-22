@@ -100,11 +100,34 @@ For a dataset of this size (~3,200 rows) and structure (tabular, mixed continuou
 
 ---
 
-## 🚀 Demo App
+## 🏗️ Architecture & Deployment
 
-An interactive Streamlit app lets you enter raw movie details (budget, genre, director, cast, release date) and get a real-time success prediction with SHAP-based explanation.
+Beyond the modeling work, this project is deployed as a real two-service system, not a single notebook-turned-app:
 
-**[Try it on Hugging Face Spaces →](#)** *(link to be added after deploy)*
+```
+┌─────────────────┐        HTTPS         ┌──────────────────────┐
+│  Streamlit Cloud │ ───────────────────► │        Render         │
+│    (frontend)    │  POST /predict       │   FastAPI (backend)   │
+│                   │ ◄─────────────────── │  Random Forest + SHAP │
+└─────────────────┘   probability + SHAP  └──────────────────────┘
+```
+
+- **Backend — FastAPI**, exposing `POST /predict` and `GET /health`. Loads the trained model and SHAP `TreeExplainer` **once** at startup (not per-request), validates every input with Pydantic, and returns a probability plus the top-3 SHAP features driving that specific prediction. Historical success rates for directors, cast, and production companies are served from a **SQLite** database rather than loose pickles.
+- **Frontend — Streamlit**, a thin UI layer with no model logic: it collects form input and calls the backend over HTTP.
+- **Containerization — Docker**, with a `Dockerfile` per service and a `docker-compose.yml` for local development, so both services run with a single `docker compose up` instead of manually juggling two virtual environments.
+- **Deployment** — backend as a Docker web service on **Render**; frontend on **Streamlit Community Cloud**, which manages its own build from `requirements.txt`.
+- **Dependency pinning matters here**: the backend pins `scikit-learn==1.7.2` to match the exact version the model was trained with — a version mismatch can silently change predictions.
+
+---
+
+## 🚀 Live Demo
+
+- **App:** [cineai-pedrosall.streamlit.app](https://cineai-pedrosall.streamlit.app/)
+- **API docs (Swagger):** [cineai-api-r3l7.onrender.com/docs](https://cineai-api-r3l7.onrender.com/docs)
+
+Enter raw movie details (budget, genre, director, cast, release date) and get a real-time success prediction with a SHAP-based explanation of the top factors.
+
+> ⚠️ The backend runs on Render's free tier, which sleeps after ~15 minutes of inactivity. The first request after a period of inactivity can take 30–50s to wake it up — this is expected, not a bug.
 
 If a director, actor, or production company isn't found in the historical dataset, the app falls back to the global success rate (0.755) — the same logic used during training for unseen entities.
 
@@ -112,24 +135,42 @@ If a director, actor, or production company isn't found in the historical datase
 
 ## 🛠️ How to Run Locally
 
+### Option 1 — Notebooks only (model exploration)
+
 ```bash
-# Clone the repo
 git clone https://github.com/pedrosall/cineai.git
 cd cineai
-
-# Set up environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Run notebooks in order
 jupyter lab notebooks/
+```
 
-# Or run the demo app
+**Note:** raw data is not included in the repo. Download the [TMDB 5000 Movie Dataset](https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata) from Kaggle and place the CSVs in `data/raw/` before running `01_eda.ipynb`.
+
+### Option 2 — Run the full app manually (two services)
+
+```bash
+# Terminal 1 — backend
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+# Terminal 2 — frontend
+cd ..
+python -m venv frontend_venv && source frontend_venv/bin/activate
+pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
-**Note:** raw data is not included in the repo (see `.gitignore`). Download the [TMDB 5000 Movie Dataset](https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata) from Kaggle and place the CSVs in `data/raw/` before running `01_eda.ipynb`.
+### Option 3 — Docker Compose (recommended, mirrors production)
+
+```bash
+docker compose up --build
+```
+
+Backend at `http://localhost:8000/docs`, frontend at `http://localhost:8501`.
 
 ---
 
@@ -138,7 +179,9 @@ streamlit run app/streamlit_app.py
 ```
 cineai/
 ├── README.md
-├── requirements.txt
+├── requirements.txt          # frontend deps (streamlit, requests)
+├── docker-compose.yml
+├── .dockerignore
 ├── data/
 │   ├── raw/                  # TMDB CSVs (not tracked)
 │   └── processed/            # cleaned pickles (not tracked)
@@ -148,9 +191,23 @@ cineai/
 │   ├── 03_baseline.ipynb
 │   ├── 04_neural_net.ipynb
 │   └── 05_shap.ipynb
-├── models/                    # trained models (not tracked)
+├── scripts/
+│   └── build_db.py           # migrates rate lookups from pkl to SQLite
+├── models/
+│   ├── random_forest.pkl     # tracked (production model)
+│   ├── scaler.pkl            # tracked
+│   ├── cols_to_scale.pkl     # tracked
+│   └── cineai.db             # tracked (director/cast/company rates)
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt      # backend deps (fastapi, sklearn, shap...)
+│   ├── main.py                # FastAPI app: /health, /predict
+│   ├── schemas.py             # Pydantic request/response contracts
+│   └── model_service.py       # model loading, prediction, SHAP
+├── frontend/
+│   └── Dockerfile             # local dev only — Streamlit Cloud ignores this
 └── app/
-    └── streamlit_app.py
+    └── streamlit_app.py       # UI, calls the backend over HTTP
 ```
 
 ---
