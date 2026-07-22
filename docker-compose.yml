@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"          # host:contenedor — accedes desde tu navegador en localhost:8000
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      # "backend" es el nombre del servicio de arriba, no una IP fija.
+      # Docker Compose crea una red privada donde cada servicio se llama
+      # por su nombre, como un hostname de verdad.
+      - API_URL=http://backend:8000
+    depends_on:
+      - backend

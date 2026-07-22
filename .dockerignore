@@ -1,0 +1,13 @@
+venv/
+frontend_venv/
+backend/venv/
+__pycache__/
+*.pyc
+.git/
+.ipynb_checkpoints/
+notebooks/
+hf_cineai/
+models.zip
+requirements.full-env.txt.bak
+.DS_Store
+data/
