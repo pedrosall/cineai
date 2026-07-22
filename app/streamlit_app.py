@@ -14,7 +14,13 @@ import os
 # En Streamlit Cloud, se define en "Settings -> Secrets" (lo vemos en Fase 4).
 # En Docker Compose, se define en docker-compose.yml (lo vemos en Fase 3).
 # ---------------------------------------------------------------------------
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+def get_api_url():
+    try:
+        return st.secrets["API_URL"]
+    except Exception:
+        return os.getenv("API_URL", "http://localhost:8000")
+
+API_URL = get_api_url()
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -104,7 +110,7 @@ with st.form("movie_form"):
 # ---------------------------------------------------------------------------
 def call_predict_api(payload: dict) -> dict:
     """Llama a POST /predict. Lanza excepción si la API no responde o da error."""
-    response = requests.post(f"{API_URL}/predict", json=payload, timeout=10)
+    response = requests.post(f"{API_URL}/predict", json=payload, timeout=60)
     response.raise_for_status()  # lanza excepción si el código no es 2xx
     return response.json()
 
@@ -124,7 +130,7 @@ if submitted:
     }
 
     try:
-        with st.spinner("Consultando el modelo..."):
+        with st.spinner("Consultando el modelo... (si la API llevaba dormida, puede tardar ~30-50s)"):
             result = call_predict_api(payload)
     except requests.exceptions.ConnectionError:
         st.error(

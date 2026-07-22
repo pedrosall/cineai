@@ -1,24 +1,33 @@
 # Entorno
 .venv/
+venv/
+frontend_venv/
+backend/venv/
 __pycache__/
 *.pyc
 
-# Datos (no subir CSVs ni pickles a GitHub)
+# Datos (no subir CSVs ni pickles crudos a GitHub)
 data/raw/
 data/processed/
 
 # Modelos
-models/
+# random_forest.pkl, scaler.pkl, cols_to_scale.pkl y cineai.db SÍ se trackean
+# (~22MB total) para que Render los despliegue directamente desde git.
+# Los *_map.pkl y global_rate.pkl ya NO hacen falta en producción: sus datos
+# viven en cineai.db (ver scripts/build_db.py).
+models/mlp_best.keras
+models/director_map.pkl
+models/company_map.pkl
+models/cast_map.pkl
+models/global_rate.pkl
 
 # Jupyter
 .ipynb_checkpoints/
 
-# Sistema
-.DS_Storevenv/
-frontend_venv/
-backend/venv/
-hf_cineai/
-models.zip
+# Experimentos sueltos
 hf_cineai/
 models.zip
 requirements.full-env.txt.bak
+
+# Sistema
+.DS_Store
